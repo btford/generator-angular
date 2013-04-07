@@ -41,10 +41,12 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('stage', 'git add files before running the release task', function() {
+    console.log(this.options());
+    var files = this.data.files;
     grunt.util.spawn({
       cmd: process.platform === 'win32' ?
         'git.cmd' : 'git',
-      args: ['add'].append(this.data.files)
+      args: ['add'].append(files)
     }, grunt.task.current.async());
   });
 
