@@ -15,4 +15,5 @@ util.inherits(Generator, ScriptBase);
 
 Generator.prototype.createAppFile = function createAppFile() {
   this.appTemplate('app', 'scripts/app');
+  this.markupTemplate('main', 'views/main');
 };

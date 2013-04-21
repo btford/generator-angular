@@ -42,59 +42,94 @@ function Generator() {
     this.env.options.coffee = this.options.coffee;
   }
 
+  if (typeof this.env.options.jade === 'undefined') {
+    this.option('jade');
+
+    // attempt to detect if user is using Jade or not
+    // if cml arg provided, use that; else look for the existence of cs
+    if (!this.options.jade &&
+      this.expandFiles(path.join(this.env.options.appPath, '/**/*.jade'), {}).length > 0) {
+      this.options.jade = true;
+    }
+
+    this.env.options.jade = this.options.jade;
+  }
+
   if (typeof this.env.options.minsafe === 'undefined') {
     this.option('minsafe');
     this.env.options.minsafe = this.options.minsafe;
   }
 
-  var sourceRoot = '/templates/javascript';
+  this.scriptRoot = '/javascript';
   this.scriptSuffix = '.js';
 
+  this.markupRoot = '/templates/html';
+  this.markupSuffix = '.html';
+
   if (this.env.options.coffee) {
-    sourceRoot = '/templates/coffeescript';
+    this.scriptRoot = '/coffeescript';
     this.scriptSuffix = '.coffee';
   }
 
-  if (this.env.options.minsafe) {
-    sourceRoot += '-min';
+  if (this.env.options.jade) {
+    this.markupRoot = '/templates/jade';
+    this.markupSuffix = '.jade';
   }
 
-  this.sourceRoot(path.join(__dirname, sourceRoot));
+  if (this.env.options.minsafe) {
+    this.scriptRoot += '-min';
+  }
+
+  this.sourceRoot(path.join(__dirname, '/templates'));
+  this.markupRoot = path.join(__dirname, this.markupRoot);
 }
 
 util.inherits(Generator, yeoman.generators.NamedBase);
 
+
+// generate .js or .coffee app files
 Generator.prototype.appTemplate = function (src, dest) {
   yeoman.generators.Base.prototype.template.apply(this, [
-    src + this.scriptSuffix,
+    path.join(this.scriptRoot, src) + this.scriptSuffix,
     path.join(this.env.options.appPath, dest) + this.scriptSuffix
   ]);
 };
 
+
+// generate .js or .coffee test files
 Generator.prototype.testTemplate = function (src, dest) {
   yeoman.generators.Base.prototype.template.apply(this, [
-    src + this.scriptSuffix,
+    path.join(this.scriptRoot, src) + this.scriptSuffix,
     path.join(this.env.options.testPath, dest) + this.scriptSuffix
   ]);
 };
 
-Generator.prototype.htmlTemplate = function (src, dest) {
+
+// Generate HTML or Jade
+Generator.prototype.markupTemplate = function (src, dest) {
   yeoman.generators.Base.prototype.template.apply(this, [
-    src,
-    path.join(this.env.options.appPath, dest)
+    path.join(this.markupRoot, src) + this.markupSuffix,
+    path.join(this.env.options.appPath, dest) + this.markupSuffix
   ]);
 };
 
 Generator.prototype.addScriptToIndex = function (script) {
+
+  var needle = '<!-- endbuild -->';
+  var splicable = '<script src="scripts/' + script + '.js"></script>';
+
+  if (this.env.options.jade) {
+    needle = '// endbuild';
+    splicable = "script(src='scripts/" + script + ".js')";
+  }
+
   try {
     var appPath = this.env.options.appPath;
-    var fullPath = path.join(appPath, 'index.html');
+    var fullPath = path.join(appPath, 'index' + this.scriptSuffix);
     angularUtils.rewriteFile({
       file: fullPath,
-      needle: '<!-- endbuild -->',
-      splicable: [
-        '<script src="scripts/' + script + '.js"></script>'
-      ]
+      needle: needle,
+      splicable: [ splicable ]
     });
   } catch (e) {
     console.log('\nUnable to find '.yellow + fullPath + '. Reference to '.yellow + script + '.js ' + 'not added.\n'.yellow);
